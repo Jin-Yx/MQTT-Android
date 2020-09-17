@@ -1,0 +1,47 @@
+apply plugin: 'com.android.library'
+apply plugin: 'kotlin-android'
+apply plugin: 'kotlin-android-extensions'
+apply plugin: 'maven'
+//apply plugin: 'com.novoda.bintray-release'
+
+android {
+    compileSdkVersion 29
+
+    defaultConfig {
+        minSdkVersion 19
+        targetSdkVersion 29
+        versionCode 1
+        versionName "1.0.0"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+}
+
+dependencies {
+    implementation 'androidx.localbroadcastmanager:localbroadcastmanager:1.0.0'
+    implementation 'org.eclipse.paho:org.eclipse.paho.client.mqttv3:1.2.4'
+}
+
+uploadArchives{
+    repositories.mavenDeployer{
+        // 配置本地仓库路径，项目根目录下的repository目录中
+        repository(url: uri(localAARPath))
+        pom.groupId = "com.jinyx.mqtt"// 唯一标识（通常为模块包名，也可以任意）
+        pom.artifactId = "mqtt" // 项目名称（通常为类库模块名称，也可以任意）
+        pom.version = "0.0.1" // 版本号
+    }
+}
+
+//publish {
+//    userOrg = 'jinyx-dev' //bintray账户下某个组织id
+//    groupId = 'com.jinyx.mqtt' //maven仓库下库的包名，一般为模块包名
+//    artifactId = 'mqtt' //项目名称
+//    publishVersion = '0.0.1-alpha1' //版本号
+//    desc = 'A mqtt library for android' //项目介绍，可以不写
+//    website = '' //项目主页，可以不写
+//}
