@@ -23,8 +23,7 @@ allprojects {
         google()
         jcenter()
 
-        maven { url uri(localAARPath) }
-//        maven { url 'https://dl.bintray.com/jinyx-dev/maven' }
+//        maven { url uri(localAARPath) }
     }
     // 解决代码中的中文问题
     tasks.withType(Javadoc) {
