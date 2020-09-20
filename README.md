@@ -24,7 +24,7 @@ override fun onCreate(savedInstanceState: Bundle?) {
         password = "password",
         clientId = "android-${System.currentTimeMillis()}", // MQTT 客户端ID， 唯一标识，如果存在多个 MQTT 对象使用同一个 clientId，会导致相互之间不断被挤掉再重连
         willTopic = "will/android",     // 遗嘱 Topic，不能存在通配符 # 和 +，可用于监听对方是否掉线
-        willMsg = "I'm Died - $Id"      // 遗嘱消息，当客户端掉线，MQTT 服务发送ping包，客户端不回复 pong 包，MQTT 发送遗嘱消息到 订阅 willTopic 的客户端
+        willMsg = "I'm Died - $Id"      // 遗嘱消息，当客户端掉线，MQTT 服务发送pingreq包，客户端不回复 pingresp 包，MQTT 发送遗嘱消息到 订阅 willTopic 的客户端
     )
     mqttHelper = MqttHelper(this, options)
     mqttHelper.addOnMsgListener(onMqttMsgListener)
