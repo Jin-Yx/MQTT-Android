@@ -154,9 +154,7 @@ data class MqttOptions(
 ```
 
 **1. Topic**  
-&emsp;&emsp;MQTT 是一种发布/订阅的消息协议, 通过设定的主题 Topic,
-发布者向 Topic 发送的 payload 负载消息会经过服务器, 转发到所有订阅
-该 Topic 的订阅者  
+&emsp;&emsp;MQTT 是一种发布/订阅的消息协议, 通过设定的主题 Topic,发布者向 Topic 发送的 payload 负载消息会经过服务器, 转发到所有订阅该 Topic 的订阅者  
 &emsp;&emsp;**通配符**: 假想移动端消息推送场景,有的系统消息是全体用户接收,有的消息是 Android 或 iOS 设备接收, 又或者是某些消息具体推送到用户,当然, 对应的多种类型消息可以通过多订阅几个对应的 Topic 解决,也可以使用通配符;   
 &emsp;&emsp;通配符有两个, "**+**" 和 "**#**", 与正斜杠 "**/**" 组合使用;加号只能表示一级Topic, 井号可以表示任意层级 Topic; 例如: 订阅 Topic为 "**System/+**", 发布者发布的 Topic 可以是 System、System/Android、System/iOS; 但是不能是 System/iOS/123, 而订阅的 Topic 如果是"**System/#**" 则可以收到;   
 &emsp;&emsp; 注意,只有订阅的 Topic 才可以使用 通配符, 发布和遗嘱的 Topic 不能包含通配符.  
