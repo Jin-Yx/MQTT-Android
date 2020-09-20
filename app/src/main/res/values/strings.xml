@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">MQTT</string>
+
+    <string name="mqtt_notification_title">设置前台服务通知的标题</string>
+    <string name="mqtt_notification_content">设置前台服务通知的内容</string>
+    <bool name="mqtt_foreground_notification_low_26">true</bool>
 </resources>

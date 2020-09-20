@@ -1,11 +1,17 @@
 package com.jinyx.mqtt
 
+import android.Manifest
 import android.content.Context
+import android.net.ConnectivityManager
+import android.net.NetworkInfo
+import android.os.Handler
+import android.os.Looper
+import android.support.annotation.RequiresPermission
 import com.jinyx.mqtt.paho.MqttAndroidClient
 import org.eclipse.paho.client.mqttv3.*
 import kotlin.math.max
 
-class MqttHelper(context: Context, private val mqttOptions: MqttOptions) : IMqtt {
+class MqttHelper(private val context: Context, private val mqttOptions: MqttOptions) : IMqtt {
 
     private var mState = MqttStatus.FAILURE
 
@@ -23,7 +29,8 @@ class MqttHelper(context: Context, private val mqttOptions: MqttOptions) : IMqtt
 
     private var mqttAndroidClient: MqttAndroidClient? = null
 
-    private var mqttReconnectHandler: MqttReconnectHandler? = null
+    private var reconnectHandler: Handler? = null
+    private var reconnectRunner: ReconnectRunner? = null
 
     private var mMsgListener: OnMqttMsgListener? = null
     private var mStatusListener: OnMqttStatusChangeListener? = null
@@ -61,38 +68,47 @@ class MqttHelper(context: Context, private val mqttOptions: MqttOptions) : IMqtt
                 }
             }
         })
-        mqttReconnectHandler = MqttReconnectHandler(this, context.applicationContext, mqttOptions.reconnectInterval)
+        reconnectHandler = Handler(Looper.getMainLooper())
         connect()
     }
 
     override fun connect() {
         try {
-            mqttAndroidClient?.connect(mqttConnectOptions, null, object : IMqttActionListener {
-                override fun onSuccess(asyncActionToken: IMqttToken) {
-                    val disconnectedBufferOptions = DisconnectedBufferOptions()
-                    disconnectedBufferOptions.isBufferEnabled = true
-                    disconnectedBufferOptions.bufferSize = 100
-                    disconnectedBufferOptions.isPersistBuffer = false
-                    disconnectedBufferOptions.isDeleteOldestMessages = false
-                    mqttAndroidClient?.setBufferOpts(disconnectedBufferOptions)
-                    subscribeToService()
+            if (mqttAndroidClient?.isConnected == true) {
+                reconnectHandler?.removeCallbacksAndMessages(null)
+                if (mState != MqttStatus.SUCCESS) {
+                    changeState(MqttStatus.SUCCESS, null)
                 }
+            } else {
+                mqttAndroidClient?.connect(mqttConnectOptions, null, object : IMqttActionListener {
+                    override fun onSuccess(asyncActionToken: IMqttToken) {
+                        val disconnectedBufferOptions = DisconnectedBufferOptions()
+                        disconnectedBufferOptions.isBufferEnabled = true
+                        disconnectedBufferOptions.bufferSize = 100
+                        disconnectedBufferOptions.isPersistBuffer = false
+                        disconnectedBufferOptions.isDeleteOldestMessages = false
+                        mqttAndroidClient?.setBufferOpts(disconnectedBufferOptions)
+                        subscribeToService()
+                    }
 
-                override fun onFailure(asyncActionToken: IMqttToken, exception: Throwable) {
-                    changeState(MqttStatus.FAILURE, exception)
-                }
-            })
-        } catch (ex: MqttException) {
+                    override fun onFailure(asyncActionToken: IMqttToken, exception: Throwable) {
+                        changeState(MqttStatus.FAILURE, exception)
+                    }
+                })
+            }
+        } catch (e: MqttException) {
+            changeState(MqttStatus.FAILURE, e)
         }
     }
 
-    protected fun reconnect() {
+    private fun reconnect() {
         connect()
     }
 
     override fun disConnect() {
         mMsgListener = null
         mStatusListener = null
+        reconnectHandler?.removeCallbacksAndMessages(null)
         if (mqttAndroidClient != null) {
             if (mqttAndroidClient?.isConnected == true) {
                 mqttAndroidClient?.disconnect()
@@ -136,7 +152,6 @@ class MqttHelper(context: Context, private val mqttOptions: MqttOptions) : IMqtt
     }
 
     override fun pubMessage(topic: String, payload: ByteArray, qos: Int, retain: Boolean) {
-        if (mState != MqttStatus.SUCCESS) return
         try {
             mqttAndroidClient?.publish(topic, payload, qos, retain)
         } catch (e: MqttException) {
@@ -156,12 +171,31 @@ class MqttHelper(context: Context, private val mqttOptions: MqttOptions) : IMqtt
         mState = state
         mStatusListener?.onChange(state, throwable)
         if (mState == MqttStatus.LOST) {
-            reconnect()
+            connect()
         }
-        if (mState == MqttStatus.SUCCESS) {
-            mqttReconnectHandler?.removeCallbacksAndMessages(null)
-        } else {
-            mqttReconnectHandler?.sendEmptyMessageDelayed(MqttReconnectHandler.RECONNECT, max(0, mqttOptions.reconnectInterval))
+        reconnectHandler?.removeCallbacksAndMessages(null)
+        if (mState != MqttStatus.SUCCESS) {
+            if (reconnectRunner == null) {
+                reconnectRunner = ReconnectRunner(context.applicationContext)
+            }
+            reconnectHandler?.postDelayed(reconnectRunner!!, max(0, mqttOptions.reconnectInterval))
+        }
+    }
+
+    @RequiresPermission(Manifest.permission.ACCESS_NETWORK_STATE)
+    fun isNetworkAvailable(context: Context): Boolean {
+        val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
+        val info = cm?.activeNetworkInfo
+        return info != null && info.isConnected && info.state == NetworkInfo.State.CONNECTED
+    }
+
+    private inner class ReconnectRunner(private val context: Context) : Runnable {
+        override fun run() {
+            if (isNetworkAvailable(context)) {
+                reconnect()
+            } else {
+                reconnectHandler?.postDelayed(this, max(0, mqttOptions.reconnectInterval))
+            }
         }
     }
 

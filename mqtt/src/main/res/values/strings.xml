@@ -2,4 +2,5 @@
 <resources>
     <string name="mqtt_notification_title">MQTT 通信标题</string>
     <string name="mqtt_notification_content">MQTT 通知内容</string>
+    <bool name="mqtt_foreground_notification_low_26">false</bool>
 </resources>

@@ -6,7 +6,7 @@
 **1. 导入依赖**  
 ```groovy
 dependencies {
-    implementation 'com.jinyx.mqtt:mqtt:0.0.1'  // androidx + kotlin
+    implementation 'com.jinyx.mqtt:mqtt:0.0.1'
 }
 ```
 
@@ -122,7 +122,7 @@ override fun onDestroy() {
 ```
 
 **10. 通知设置**  
-&emsp;&emsp;由于 MQTT 启动了一个 Service，而 Android 8.0 以上对于后台 Service 限制时长 5 秒；
+&emsp;&emsp;由于 MQTT 启动了一个 Service，而 Android 8.0 及以上对于后台 Service 限制时长 5 秒；
 所以将 MqttService 绑定到 Notification 上成为了一个前台通知；通知的标题和内容显示可以
 在 strings.xml 中设置，对应属性如下：  
 ```xml
@@ -130,8 +130,11 @@ override fun onDestroy() {
 <resources>
     <string name="mqtt_notification_title">MQTT 通信标题</string>
     <string name="mqtt_notification_content">MQTT 通知内容</string>
+    <bool name="mqtt_foreground_notification_low_26">false</bool>
 </resources>
 ```
+&emsp;&emsp;Android 8.0 及以上开启前台服务绑定到通知，8.0 以下默认不启用，可将 mqtt_foreground_notification_low_26 设为 true，
+将 8.0 以下设备也开启前台通知服务  
 
 
 ### 三、MQTT 相关参数说明  
@@ -214,8 +217,8 @@ System/iOS; 但是不能是 System/iOS/123, 而订阅的 Topic 如果是
 &emsp;&emsp;**qos = 1**：确保消息至少有一次到达接收方，发送方向接收方发送消息，需要等待接收方返回应答消息，  
 如果发送方在一定时间之内没有收到应答，发送方继续下一次消息发送，直到收到应答消息，删除本地消息缓存，不再发送；所以接收方可能收到1-n次消息；
 适用于需要收到所有消息，客户端可以处理重复消息。  
-&emsp;&emsp;**qos = 2**：  
-
+&emsp;&emsp;**qos = 2**：确保消息只一次到达接收方，发送方和接收方之间消息处理流程最复杂；  
+&emsp;&emsp;[Mqtt Qos 深度解读](https://www.jianshu.com/p/8b0291e8ee02)、[MQTT协议QoS2 准确一次送达的实现](https://blog.csdn.net/zerooffdate/article/details/78950907)   
 
 **7. payload 负载消息**  
 &emsp;&emsp;字节流类型, 是 MQTT 通信传输的真实数据  

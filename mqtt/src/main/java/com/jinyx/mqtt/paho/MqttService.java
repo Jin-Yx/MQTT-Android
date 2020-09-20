@@ -31,8 +31,9 @@ import android.os.Bundle;
 import android.os.IBinder;
 import android.os.PowerManager;
 import android.os.PowerManager.WakeLock;
+import android.support.v4.content.LocalBroadcastManager;
 
-import androidx.localbroadcastmanager.content.LocalBroadcastManager;
+//import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import com.jinyx.mqtt.R;
 
@@ -586,20 +587,18 @@ public class MqttService extends Service implements MqttTraceHandler {
      */
     @Override
     public void onDestroy() {
-        // disconnect immediately
         for (MqttConnection client : connections.values()) {
             client.disconnect(null, null);
         }
-
-        // clear down
         if (mqttServiceBinder != null) {
             mqttServiceBinder = null;
         }
 
         unregisterBroadcastReceivers();
 
-        if (this.messageStore != null)
+        if (this.messageStore != null) {
             this.messageStore.close();
+        }
 
         stopForeground(true);
         cancelNotify();
@@ -640,29 +639,31 @@ public class MqttService extends Service implements MqttTraceHandler {
      */
     @Override
     public int onStartCommand(final Intent intent, int flags, final int startId) {
-        try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                String channelId = "mqtt";
-                String channelName = "mqttChannel";
-                NotificationChannel channel = new NotificationChannel(channelId, channelName, NotificationManager.IMPORTANCE_DEFAULT);
-                channel.setLockscreenVisibility(Notification.FLAG_FOREGROUND_SERVICE);
-                NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-                if (manager != null) {
-                    manager.createNotificationChannel(channel);
-                }
-                Notification notification = new Notification.Builder(getApplicationContext(), channelId)
-                        .setCategory(Notification.CATEGORY_SERVICE)
-                        .setSmallIcon(android.R.mipmap.sym_def_app_icon)
-                        .setContentText(getApplicationContext().getResources().getString(R.string.mqtt_notification_content))
-                        .setContentTitle(getApplicationContext().getResources().getString(R.string.mqtt_notification_title))
-                        .build();
-                startForeground(KEY_NOTIFY_ID, notification);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            String channelId = "mqtt";
+            String channelName = "mqttChannel";
+            NotificationChannel channel = new NotificationChannel(channelId, channelName, NotificationManager.IMPORTANCE_DEFAULT);
+            channel.setLockscreenVisibility(Notification.FLAG_FOREGROUND_SERVICE);
+            NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+            if (manager != null) {
+                manager.createNotificationChannel(channel);
             }
-            registerBroadcastReceivers();
-        } catch (Exception e) {
-            e.printStackTrace();
+            startForeground(KEY_NOTIFY_ID, buildNotification(new Notification.Builder(getApplicationContext(), channelId)));
+        } else if (getApplicationContext().getResources().getBoolean(R.bool.mqtt_foreground_notification_low_26)) {
+            startForeground(KEY_NOTIFY_ID, buildNotification(new Notification.Builder(getApplicationContext())));
         }
+        registerBroadcastReceivers();
         return START_STICKY;
+    }
+
+    private Notification buildNotification(Notification.Builder builder) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            builder.setCategory(Notification.CATEGORY_SERVICE);
+        }
+        return builder.setSmallIcon(android.R.mipmap.sym_def_app_icon)
+                .setContentText(getApplicationContext().getResources().getString(R.string.mqtt_notification_content))
+                .setContentTitle(getApplicationContext().getResources().getString(R.string.mqtt_notification_title))
+                .build();
     }
 
     /**
